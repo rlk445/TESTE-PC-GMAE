@@ -55,7 +55,7 @@ async function askPerms() {
 async function openCam() {
   if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('Este app não tem acesso à câmera.');
-  const tries = [{ facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } }, { facingMode: 'environment' }, true]; let err;
+  const tries = [{ facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 60, min: 30 } }, { facingMode: 'environment' }, true]; let err;
   for (const v of tries) { try { camStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: v }); return; } catch (e) { err = e; if (e.name === 'NotAllowedError') break; } }
   throw new Error(err && err.name === 'NotAllowedError' ? 'Permissão de câmera negada. Ajustes do iPhone > SKZ VR > Câmera.' : 'Não consegui abrir a câmera: ' + (err && err.message));
 }
@@ -118,6 +118,7 @@ async function startRtc() {
   c.onicecandidate = e => { if (e.candidate && pc === c) sendWs({ t: 'ice', c: e.candidate }); };
   c.ontrack = e => {
     if (pc !== c) return;
+    try { if (e.receiver) { if ('jitterBufferTarget' in e.receiver) e.receiver.jitterBufferTarget = 0; if ('playoutDelayHint' in e.receiver) e.receiver.playoutDelayHint = 0; } } catch (er) {}   // menos fila de vídeo = menos atraso
     if (!remote) remote = new MediaStream(); remote.addTrack(e.track); rv.srcObject = remote; rv.muted = false;
     startPlay();
   };
